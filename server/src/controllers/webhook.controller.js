@@ -143,6 +143,16 @@ async function handleGhlWebhook(req, res, next) {
       timeToBookSeconds,
     });
 
+    // Log raw payload for debugging / future re-processing
+    try {
+      await pool.query(
+        'INSERT INTO webhook_logs (event_type, payload, booking_id) VALUES ($1, $2, $3)',
+        [eventType, JSON.stringify(payload), booking.id]
+      );
+    } catch (logErr) {
+      console.error('Failed to log webhook payload:', logErr.message);
+    }
+
     console.log(`Booking received: ${contactName} (${contactEmail}) → video: ${utms.utm_campaign || 'unknown'}, link: ${utms.utm_content || 'unknown'}, matched click: ${clickId ? 'yes' : 'no'}`);
 
     res.status(201).json({ status: 'created', booking_id: booking.id, attributed: !!linkId });

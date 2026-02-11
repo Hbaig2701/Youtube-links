@@ -17,7 +17,7 @@ async function getVideo(req, res, next) {
 
 async function createVideo(req, res, next) {
   try {
-    const { title, slug, youtube_url, youtube_video_id, domain_id } = req.body;
+    const { title, slug, youtube_url, youtube_video_id, domain_id, source_type } = req.body;
     if (!title) return res.status(400).json({ error: 'Title is required' });
 
     const video = await videoModel.create({
@@ -26,6 +26,7 @@ async function createVideo(req, res, next) {
       youtubeUrl: youtube_url,
       youtubeVideoId: youtube_video_id,
       domainId: domain_id,
+      sourceType: source_type,
     });
     res.status(201).json(video);
   } catch (err) { next(err); }

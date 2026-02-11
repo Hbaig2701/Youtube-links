@@ -201,6 +201,7 @@ function VideoForm({ onCreated, domains }) {
   const [slug, setSlug] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [domainId, setDomainId] = useState('');
+  const [sourceType, setSourceType] = useState('youtube');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -213,11 +214,13 @@ function VideoForm({ onCreated, domains }) {
         slug: slug.trim() || undefined,
         youtube_url: youtubeUrl.trim() || undefined,
         domain_id: domainId ? Number(domainId) : undefined,
+        source_type: sourceType,
       });
       setTitle('');
       setSlug('');
       setYoutubeUrl('');
       setDomainId('');
+      setSourceType('youtube');
       onCreated();
     } catch (err) {
       alert(err.message);
@@ -278,6 +281,18 @@ function VideoForm({ onCreated, domains }) {
             </select>
           </div>
         )}
+        <div className="min-w-[130px]">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Source</label>
+          <select
+            value={sourceType}
+            onChange={(e) => setSourceType(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+          >
+            <option value="youtube">YouTube</option>
+            <option value="community">Community</option>
+            <option value="linktree">Linktree</option>
+          </select>
+        </div>
         <button
           type="submit"
           disabled={submitting}
@@ -428,7 +443,15 @@ function VideoSection({ video, templates, onRefresh }) {
         <div className="flex items-center gap-3">
           {expanded ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">{video.title}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-gray-900">{video.title}</h3>
+              {video.source_type === 'community' && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-50 text-purple-700">Community</span>
+              )}
+              {video.source_type === 'linktree' && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700">Linktree</span>
+              )}
+            </div>
             <div className="flex items-center gap-2 mt-0.5">
               <p className="text-xs text-gray-400 font-mono">/{video.slug}</p>
               {video.domain && (
@@ -575,10 +598,31 @@ export default function LinkManager() {
       ) : videos?.length === 0 ? (
         <EmptyState message="No videos yet. Create your first one above!" />
       ) : (
-        <div className="space-y-3">
-          {videos?.map(video => (
-            <VideoSection key={video.id} video={video} templates={templates} onRefresh={refetch} />
-          ))}
+        <div className="space-y-6">
+          {(() => {
+            const ytVideos = videos.filter(v => !v.source_type || v.source_type === 'youtube');
+            const otherVideos = videos.filter(v => v.source_type && v.source_type !== 'youtube');
+            return (
+              <>
+                {ytVideos.length > 0 && (
+                  <div className="space-y-3">
+                    {otherVideos.length > 0 && <h3 className="text-sm font-semibold text-gray-500">YouTube Videos</h3>}
+                    {ytVideos.map(video => (
+                      <VideoSection key={video.id} video={video} templates={templates} onRefresh={refetch} />
+                    ))}
+                  </div>
+                )}
+                {otherVideos.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-500">Other Sources</h3>
+                    {otherVideos.map(video => (
+                      <VideoSection key={video.id} video={video} templates={templates} onRefresh={refetch} />
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
     </div>

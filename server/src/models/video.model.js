@@ -41,7 +41,7 @@ const findBySlug = async (slug) => {
   return rows[0];
 };
 
-const create = async ({ slug: customSlug, title, youtubeUrl, youtubeVideoId, domainId }) => {
+const create = async ({ slug: customSlug, title, youtubeUrl, youtubeVideoId, domainId, sourceType }) => {
   let slug = customSlug ? slugify(customSlug) : slugify(title);
 
   // Handle slug collisions
@@ -57,16 +57,16 @@ const create = async ({ slug: customSlug, title, youtubeUrl, youtubeVideoId, dom
   }
 
   const { rows } = await pool.query(`
-    INSERT INTO videos (slug, title, youtube_url, youtube_video_id, domain_id)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO videos (slug, title, youtube_url, youtube_video_id, domain_id, source_type)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING id
-  `, [slug, title, youtubeUrl || null, youtubeVideoId || null, domainId || null]);
+  `, [slug, title, youtubeUrl || null, youtubeVideoId || null, domainId || null, sourceType || 'youtube']);
 
   return findById(rows[0].id);
 };
 
 const update = async (id, fields) => {
-  const allowed = ['title', 'youtube_url', 'youtube_video_id', 'domain_id'];
+  const allowed = ['title', 'youtube_url', 'youtube_video_id', 'domain_id', 'source_type'];
   const sets = [];
   const values = [];
   let paramIndex = 1;

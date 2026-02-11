@@ -177,7 +177,7 @@ const getGeoBreakdown = async (videoId) => {
 
 const getTopVideos = async (limit = 10) => {
   const { rows } = await pool.query(`
-    SELECT v.id, v.slug, v.title, v.created_at,
+    SELECT v.id, v.slug, v.title, v.created_at, v.source_type,
            COUNT(DISTINCT l.id) AS link_count,
            COUNT(c.id) AS total_clicks
     FROM videos v

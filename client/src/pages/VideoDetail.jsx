@@ -48,10 +48,18 @@ export default function VideoDetail() {
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{video.title}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-gray-900">{video.title}</h2>
+              {video.source_type === 'community' && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700">Community</span>
+              )}
+              {video.source_type === 'linktree' && (
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">Linktree</span>
+              )}
+            </div>
             <p className="text-sm text-gray-400 mt-1">/{video.slug}</p>
           </div>
-          {video.youtube_url && (
+          {video.source_type === 'youtube' && video.youtube_url && (
             <a
               href={video.youtube_url}
               target="_blank"

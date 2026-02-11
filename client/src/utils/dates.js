@@ -10,15 +10,16 @@ export function safeParseDate(value) {
 }
 
 /**
- * Parse a date-only string (e.g. "2025-06-15") from the DB.
- * Appends T00:00:00 so it's interpreted as local time, not UTC.
+ * Parse a date-only string from the DB (e.g. "2025-02-11" or "2025-02-11T00:00:00.000Z").
+ * Always extracts just the YYYY-MM-DD and interprets as local midnight
+ * to avoid UTC timezone shifts showing the wrong day.
  */
 export function parseDateString(value) {
   if (!value) return null;
   const str = String(value);
-  // Already has a time component — parse directly
-  if (str.includes('T') || str.includes(' ')) return safeParseDate(str);
-  return safeParseDate(str + 'T00:00:00');
+  const dateMatch = str.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (dateMatch) return safeParseDate(dateMatch[1] + 'T00:00:00');
+  return safeParseDate(str);
 }
 
 /**

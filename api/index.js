@@ -6,7 +6,7 @@ try {
 } catch (err) {
   // If modules fail to load, return the error
   module.exports = (req, res) => {
-    res.status(500).json({ error: 'Module load failed', message: err.message, stack: err.stack });
+    res.status(500).json({ error: `Module load failed: ${err.message}`, message: err.message, stack: err.stack });
   };
   // Prevent the rest of the file from running
   app = null;

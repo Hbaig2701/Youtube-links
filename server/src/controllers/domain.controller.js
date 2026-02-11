@@ -1,44 +1,50 @@
 const domainModel = require('../models/domain.model');
 
-function listDomains(req, res) {
-  const domains = domainModel.findAll();
-  res.json(domains);
+async function listDomains(req, res, next) {
+  try {
+    const domains = await domainModel.findAll();
+    res.json(domains);
+  } catch (err) { next(err); }
 }
 
-function createDomain(req, res) {
-  const { domain, label, is_default } = req.body;
-  if (!domain || !label) {
-    return res.status(400).json({ error: 'Domain and label are required' });
-  }
-
-  // Normalize: strip protocol and trailing slash
-  const cleaned = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-
+async function createDomain(req, res, next) {
   try {
-    const d = domainModel.create({ domain: cleaned, label, isDefault: is_default || false });
+    const { domain, label, is_default } = req.body;
+    if (!domain || !label) {
+      return res.status(400).json({ error: 'Domain and label are required' });
+    }
+
+    // Normalize: strip protocol and trailing slash
+    const cleaned = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+
+    const d = await domainModel.create({ domain: cleaned, label, isDefault: is_default || false });
     res.status(201).json(d);
   } catch (err) {
-    if (err.message.includes('UNIQUE constraint failed')) {
+    if (err.code === '23505') {
       return res.status(409).json({ error: 'This domain is already added' });
     }
-    throw err;
+    next(err);
   }
 }
 
-function updateDomain(req, res) {
-  const existing = domainModel.findById(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Domain not found' });
+async function updateDomain(req, res, next) {
+  try {
+    const existing = await domainModel.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Domain not found' });
 
-  const updated = domainModel.update(req.params.id, req.body);
-  res.json(updated);
+    const updated = await domainModel.update(req.params.id, req.body);
+    res.json(updated);
+  } catch (err) { next(err); }
 }
 
-function deleteDomain(req, res) {
-  const existing = domainModel.findById(req.params.id);
-  if (!existing) return res.status(404).json({ error: 'Domain not found' });
+async function deleteDomain(req, res, next) {
+  try {
+    const existing = await domainModel.findById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Domain not found' });
 
-  domainModel.remove(req.params.id);
-  res.status(204).end();
+    await domainModel.remove(req.params.id);
+    res.status(204).end();
+  } catch (err) { next(err); }
 }
 
 module.exports = { listDomains, createDomain, updateDomain, deleteDomain };

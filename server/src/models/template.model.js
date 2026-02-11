@@ -1,41 +1,46 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
-const findAll = () => {
-  return db.prepare('SELECT * FROM link_templates ORDER BY created_at ASC').all();
+const findAll = async () => {
+  const { rows } = await pool.query('SELECT * FROM link_templates ORDER BY created_at ASC');
+  return rows;
 };
 
-const findById = (id) => {
-  return db.prepare('SELECT * FROM link_templates WHERE id = ?').get(id);
+const findById = async (id) => {
+  const { rows } = await pool.query('SELECT * FROM link_templates WHERE id = $1', [id]);
+  return rows[0];
 };
 
-const create = ({ label, destinationUrl, isBookingLink }) => {
-  const result = db.prepare(
-    'INSERT INTO link_templates (label, destination_url, is_booking_link) VALUES (?, ?, ?)'
-  ).run(label, destinationUrl, isBookingLink ? 1 : 0);
-  return findById(result.lastInsertRowid);
+const create = async ({ label, destinationUrl, isBookingLink }) => {
+  const { rows } = await pool.query(
+    'INSERT INTO link_templates (label, destination_url, is_booking_link) VALUES ($1, $2, $3) RETURNING id',
+    [label, destinationUrl, isBookingLink || false]
+  );
+  return findById(rows[0].id);
 };
 
-const update = (id, fields) => {
+const update = async (id, fields) => {
   const allowed = ['label', 'destination_url', 'is_booking_link'];
   const sets = [];
   const values = [];
+  let paramIndex = 1;
 
   for (const key of allowed) {
     if (fields[key] !== undefined) {
-      sets.push(`${key} = ?`);
-      values.push(key === 'is_booking_link' ? (fields[key] ? 1 : 0) : fields[key]);
+      sets.push(`${key} = $${paramIndex}`);
+      values.push(fields[key]);
+      paramIndex++;
     }
   }
 
   if (sets.length === 0) return findById(id);
 
   values.push(id);
-  db.prepare(`UPDATE link_templates SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+  await pool.query(`UPDATE link_templates SET ${sets.join(', ')} WHERE id = $${paramIndex}`, values);
   return findById(id);
 };
 
-const remove = (id) => {
-  db.prepare('DELETE FROM link_templates WHERE id = ?').run(id);
+const remove = async (id) => {
+  await pool.query('DELETE FROM link_templates WHERE id = $1', [id]);
 };
 
 module.exports = { findAll, findById, create, update, remove };

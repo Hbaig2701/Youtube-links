@@ -1,12 +1,12 @@
 const fs = require('fs');
 const path = require('path');
-const db = require('./connection');
+const pool = require('./connection');
 
-function migrate() {
-  db.exec(`
+async function migrate() {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS _migrations (
       name TEXT PRIMARY KEY,
-      ran_at TEXT NOT NULL DEFAULT (datetime('now'))
+      ran_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 
@@ -15,20 +15,26 @@ function migrate() {
     .filter(f => f.endsWith('.sql'))
     .sort();
 
-  const ran = new Set(
-    db.prepare('SELECT name FROM _migrations').all().map(r => r.name)
-  );
+  const { rows } = await pool.query('SELECT name FROM _migrations');
+  const ran = new Set(rows.map(r => r.name));
 
   for (const file of files) {
     if (ran.has(file)) continue;
 
     const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
-    db.transaction(() => {
-      db.exec(sql);
-      db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
-    })();
-
-    console.log(`Migration applied: ${file}`);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(sql);
+      await client.query('INSERT INTO _migrations (name) VALUES ($1)', [file]);
+      await client.query('COMMIT');
+      console.log(`Migration applied: ${file}`);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 }
 

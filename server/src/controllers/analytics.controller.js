@@ -1,21 +1,27 @@
 const clickModel = require('../models/click.model');
 
-function getDevices(req, res) {
-  const videoId = req.query.videoId || null;
-  const data = clickModel.getDeviceBreakdown(videoId);
-  res.json(data);
+async function getDevices(req, res, next) {
+  try {
+    const videoId = req.query.videoId || null;
+    const data = await clickModel.getDeviceBreakdown(videoId);
+    res.json(data);
+  } catch (err) { next(err); }
 }
 
-function getGeo(req, res) {
-  const videoId = req.query.videoId || null;
-  const data = clickModel.getGeoBreakdown(videoId);
-  res.json(data);
+async function getGeo(req, res, next) {
+  try {
+    const videoId = req.query.videoId || null;
+    const data = await clickModel.getGeoBreakdown(videoId);
+    res.json(data);
+  } catch (err) { next(err); }
 }
 
-function getVideoClicks(req, res) {
-  const range = req.query.range || '30d';
-  const data = clickModel.getByVideoId(req.params.id, range);
-  res.json(data);
+async function getVideoClicks(req, res, next) {
+  try {
+    const range = req.query.range || '30d';
+    const data = await clickModel.getByVideoId(req.params.id, range);
+    res.json(data);
+  } catch (err) { next(err); }
 }
 
 module.exports = { getDevices, getGeo, getVideoClicks };

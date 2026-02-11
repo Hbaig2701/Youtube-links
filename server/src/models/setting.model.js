@@ -1,16 +1,19 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
-const get = (key) => {
-  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
-  return row ? row.value : null;
+const get = async (key) => {
+  const { rows } = await pool.query('SELECT value FROM settings WHERE key = $1', [key]);
+  return rows[0] ? rows[0].value : null;
 };
 
-const set = (key, value) => {
-  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value);
+const set = async (key, value) => {
+  await pool.query(
+    'INSERT INTO settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = $2',
+    [key, value]
+  );
 };
 
-const getAll = () => {
-  const rows = db.prepare('SELECT * FROM settings').all();
+const getAll = async () => {
+  const { rows } = await pool.query('SELECT * FROM settings');
   const result = {};
   for (const row of rows) result[row.key] = row.value;
   return result;

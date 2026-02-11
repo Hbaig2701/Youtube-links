@@ -1,14 +1,8 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
 
-const serverRoot = path.join(__dirname, '../..');
-const dbPath = process.env.DATABASE_PATH
-  ? path.resolve(serverRoot, process.env.DATABASE_PATH)
-  : path.join(serverRoot, 'data/tracker.db');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
-const db = new Database(dbPath);
-
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-module.exports = db;
+module.exports = pool;

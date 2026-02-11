@@ -9,7 +9,9 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
-app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 app.use(express.json());
 
 app.use(routes);

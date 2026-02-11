@@ -2,27 +2,29 @@ const linkModel = require('../models/link.model');
 const videoModel = require('../models/video.model');
 const slugify = require('../utils/slugify');
 
-function listLinks(req, res) {
-  const video = videoModel.findById(req.params.id);
-  if (!video) return res.status(404).json({ error: 'Video not found' });
+async function listLinks(req, res, next) {
+  try {
+    const video = await videoModel.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
 
-  const links = linkModel.findByVideoId(req.params.id);
-  res.json(links);
+    const links = await linkModel.findByVideoId(req.params.id);
+    res.json(links);
+  } catch (err) { next(err); }
 }
 
-function createLink(req, res) {
-  const video = videoModel.findById(req.params.id);
-  if (!video) return res.status(404).json({ error: 'Video not found' });
-
-  const { label, destination_url, is_booking_link, expires_at } = req.body;
-  if (!label || !destination_url) {
-    return res.status(400).json({ error: 'Label and destination_url are required' });
-  }
-
-  const slugLabel = slugify(label);
-
+async function createLink(req, res, next) {
   try {
-    const link = linkModel.create({
+    const video = await videoModel.findById(req.params.id);
+    if (!video) return res.status(404).json({ error: 'Video not found' });
+
+    const { label, destination_url, is_booking_link, expires_at } = req.body;
+    if (!label || !destination_url) {
+      return res.status(400).json({ error: 'Label and destination_url are required' });
+    }
+
+    const slugLabel = slugify(label);
+
+    const link = await linkModel.create({
       videoId: req.params.id,
       label: slugLabel,
       destinationUrl: destination_url,
@@ -31,27 +33,31 @@ function createLink(req, res) {
     });
     res.status(201).json(link);
   } catch (err) {
-    if (err.message.includes('UNIQUE constraint failed')) {
+    if (err.code === '23505') {
       return res.status(409).json({ error: 'A link with this label already exists for this video' });
     }
-    throw err;
+    next(err);
   }
 }
 
-function updateLink(req, res) {
-  const link = linkModel.findById(req.params.id);
-  if (!link) return res.status(404).json({ error: 'Link not found' });
+async function updateLink(req, res, next) {
+  try {
+    const link = await linkModel.findById(req.params.id);
+    if (!link) return res.status(404).json({ error: 'Link not found' });
 
-  const updated = linkModel.update(req.params.id, req.body);
-  res.json(updated);
+    const updated = await linkModel.update(req.params.id, req.body);
+    res.json(updated);
+  } catch (err) { next(err); }
 }
 
-function deactivateLink(req, res) {
-  const link = linkModel.findById(req.params.id);
-  if (!link) return res.status(404).json({ error: 'Link not found' });
+async function deactivateLink(req, res, next) {
+  try {
+    const link = await linkModel.findById(req.params.id);
+    if (!link) return res.status(404).json({ error: 'Link not found' });
 
-  linkModel.deactivate(req.params.id);
-  res.status(204).end();
+    await linkModel.deactivate(req.params.id);
+    res.status(204).end();
+  } catch (err) { next(err); }
 }
 
 module.exports = { listLinks, createLink, updateLink, deactivateLink };

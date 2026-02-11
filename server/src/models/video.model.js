@@ -1,46 +1,53 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 const slugify = require('../utils/slugify');
 
-const findAll = () => {
-  return db.prepare(`
+const findAll = async () => {
+  const { rows } = await pool.query(`
     SELECT v.*,
            d.domain, d.label AS domain_label,
            COUNT(DISTINCT l.id) AS link_count,
            COUNT(c.id) AS total_clicks
     FROM videos v
     LEFT JOIN domains d ON d.id = v.domain_id
-    LEFT JOIN links l ON l.video_id = v.id AND l.active = 1
+    LEFT JOIN links l ON l.video_id = v.id AND l.active = true
     LEFT JOIN clicks c ON c.link_id = l.id
-    WHERE v.archived = 0
-    GROUP BY v.id
+    WHERE v.archived = false
+    GROUP BY v.id, d.domain, d.label
     ORDER BY v.created_at DESC
-  `).all();
+  `);
+  return rows;
 };
 
-const findById = (id) => {
-  return db.prepare(`
+const findById = async (id) => {
+  const { rows } = await pool.query(`
     SELECT v.*,
            d.domain, d.label AS domain_label,
            COUNT(DISTINCT l.id) AS link_count,
            COUNT(c.id) AS total_clicks
     FROM videos v
     LEFT JOIN domains d ON d.id = v.domain_id
-    LEFT JOIN links l ON l.video_id = v.id AND l.active = 1
+    LEFT JOIN links l ON l.video_id = v.id AND l.active = true
     LEFT JOIN clicks c ON c.link_id = l.id
-    WHERE v.id = ?
-    GROUP BY v.id
-  `).get(id);
+    WHERE v.id = $1
+    GROUP BY v.id, d.domain, d.label
+  `, [id]);
+  return rows[0];
 };
 
-const findBySlug = (slug) => {
-  return db.prepare('SELECT * FROM videos WHERE slug = ? AND archived = 0').get(slug);
+const findBySlug = async (slug) => {
+  const { rows } = await pool.query(
+    'SELECT * FROM videos WHERE slug = $1 AND archived = false', [slug]
+  );
+  return rows[0];
 };
 
-const create = ({ slug: customSlug, title, youtubeUrl, youtubeVideoId, domainId }) => {
+const create = async ({ slug: customSlug, title, youtubeUrl, youtubeVideoId, domainId }) => {
   let slug = customSlug ? slugify(customSlug) : slugify(title);
 
   // Handle slug collisions
-  const existing = db.prepare('SELECT slug FROM videos WHERE slug LIKE ?').all(slug + '%');
+  const { rows: existing } = await pool.query(
+    'SELECT slug FROM videos WHERE slug LIKE $1', [slug + '%']
+  );
   if (existing.some(v => v.slug === slug)) {
     let counter = 2;
     while (existing.some(v => v.slug === `${slug}-${counter}`)) {
@@ -49,35 +56,40 @@ const create = ({ slug: customSlug, title, youtubeUrl, youtubeVideoId, domainId 
     slug = `${slug}-${counter}`;
   }
 
-  const result = db.prepare(`
+  const { rows } = await pool.query(`
     INSERT INTO videos (slug, title, youtube_url, youtube_video_id, domain_id)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(slug, title, youtubeUrl || null, youtubeVideoId || null, domainId || null);
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id
+  `, [slug, title, youtubeUrl || null, youtubeVideoId || null, domainId || null]);
 
-  return findById(result.lastInsertRowid);
+  return findById(rows[0].id);
 };
 
-const update = (id, fields) => {
+const update = async (id, fields) => {
   const allowed = ['title', 'youtube_url', 'youtube_video_id', 'domain_id'];
   const sets = [];
   const values = [];
+  let paramIndex = 1;
 
   for (const key of allowed) {
     if (fields[key] !== undefined) {
-      sets.push(`${key} = ?`);
+      sets.push(`${key} = $${paramIndex}`);
       values.push(fields[key]);
+      paramIndex++;
     }
   }
 
   if (sets.length === 0) return findById(id);
 
   values.push(id);
-  db.prepare(`UPDATE videos SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+  await pool.query(
+    `UPDATE videos SET ${sets.join(', ')} WHERE id = $${paramIndex}`, values
+  );
   return findById(id);
 };
 
-const archive = (id) => {
-  db.prepare('UPDATE videos SET archived = 1 WHERE id = ?').run(id);
+const archive = async (id) => {
+  await pool.query('UPDATE videos SET archived = true WHERE id = $1', [id]);
 };
 
 module.exports = { findAll, findById, findBySlug, create, update, archive };

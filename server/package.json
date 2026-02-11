@@ -8,13 +8,13 @@
     "seed": "node src/db/seed.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
     "express": "^4.21.0",
     "geoip-lite": "^1.4.10",
     "helmet": "^8.0.0",
     "morgan": "^1.10.0",
+    "pg": "^8.18.0",
     "ua-parser-js": "^1.0.39"
   },
   "devDependencies": {

@@ -1,62 +1,68 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
-const findAll = () => {
-  return db.prepare('SELECT * FROM domains ORDER BY is_default DESC, created_at ASC').all();
+const findAll = async () => {
+  const { rows } = await pool.query('SELECT * FROM domains ORDER BY is_default DESC, created_at ASC');
+  return rows;
 };
 
-const findById = (id) => {
-  return db.prepare('SELECT * FROM domains WHERE id = ?').get(id);
+const findById = async (id) => {
+  const { rows } = await pool.query('SELECT * FROM domains WHERE id = $1', [id]);
+  return rows[0];
 };
 
-const findDefault = () => {
-  return db.prepare('SELECT * FROM domains WHERE is_default = 1').get();
+const findDefault = async () => {
+  const { rows } = await pool.query('SELECT * FROM domains WHERE is_default = true');
+  return rows[0];
 };
 
-const create = ({ domain, label, isDefault }) => {
+const create = async ({ domain, label, isDefault }) => {
   // If setting as default, unset other defaults
   if (isDefault) {
-    db.prepare('UPDATE domains SET is_default = 0').run();
+    await pool.query('UPDATE domains SET is_default = false');
   }
 
-  const result = db.prepare(
-    'INSERT INTO domains (domain, label, is_default) VALUES (?, ?, ?)'
-  ).run(domain, label, isDefault ? 1 : 0);
+  const { rows } = await pool.query(
+    'INSERT INTO domains (domain, label, is_default) VALUES ($1, $2, $3) RETURNING id',
+    [domain, label, isDefault || false]
+  );
 
   // If this is the first domain, make it default
-  const count = db.prepare('SELECT COUNT(*) AS c FROM domains').get().c;
-  if (count === 1) {
-    db.prepare('UPDATE domains SET is_default = 1 WHERE id = ?').run(result.lastInsertRowid);
+  const countResult = await pool.query('SELECT COUNT(*) AS c FROM domains');
+  if (parseInt(countResult.rows[0].c) === 1) {
+    await pool.query('UPDATE domains SET is_default = true WHERE id = $1', [rows[0].id]);
   }
 
-  return findById(result.lastInsertRowid);
+  return findById(rows[0].id);
 };
 
-const update = (id, fields) => {
+const update = async (id, fields) => {
   if (fields.is_default) {
-    db.prepare('UPDATE domains SET is_default = 0').run();
+    await pool.query('UPDATE domains SET is_default = false');
   }
 
   const sets = [];
   const values = [];
+  let paramIndex = 1;
 
   for (const key of ['domain', 'label', 'is_default']) {
     if (fields[key] !== undefined) {
-      sets.push(`${key} = ?`);
-      values.push(key === 'is_default' ? (fields[key] ? 1 : 0) : fields[key]);
+      sets.push(`${key} = $${paramIndex}`);
+      values.push(fields[key]);
+      paramIndex++;
     }
   }
 
   if (sets.length === 0) return findById(id);
 
   values.push(id);
-  db.prepare(`UPDATE domains SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+  await pool.query(`UPDATE domains SET ${sets.join(', ')} WHERE id = $${paramIndex}`, values);
   return findById(id);
 };
 
-const remove = (id) => {
+const remove = async (id) => {
   // Unlink videos using this domain
-  db.prepare('UPDATE videos SET domain_id = NULL WHERE domain_id = ?').run(id);
-  db.prepare('DELETE FROM domains WHERE id = ?').run(id);
+  await pool.query('UPDATE videos SET domain_id = NULL WHERE domain_id = $1', [id]);
+  await pool.query('DELETE FROM domains WHERE id = $1', [id]);
 };
 
 module.exports = { findAll, findById, findDefault, create, update, remove };

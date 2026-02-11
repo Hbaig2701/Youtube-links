@@ -485,6 +485,7 @@ function VideoSection({ video, templates, onRefresh }) {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
                         {link.label}
                       </span>
+                      <span className="ml-1.5 text-xs text-gray-300">#{link.id}</span>
                       {link.is_booking_link === 1 && (
                         <span className="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
                           Booking

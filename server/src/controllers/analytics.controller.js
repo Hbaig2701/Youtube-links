@@ -19,7 +19,10 @@ async function getGeo(req, res, next) {
 async function getVideoClicks(req, res, next) {
   try {
     const range = req.query.range || '30d';
-    const data = await clickModel.getByVideoId(req.params.id, range);
+    const startDate = req.query.start_date || null;
+    const endDate = req.query.end_date || null;
+    const linkId = req.query.link_id || null;
+    const data = await clickModel.getByVideoId(req.params.id, range, { startDate, endDate, linkId });
     res.json(data);
   } catch (err) { next(err); }
 }

@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { ArrowLeft, ExternalLink, CalendarCheck, Clock } from 'lucide-react';
 import { useFetch } from '../hooks/useFetch';
 import { getVideo, getVideoLinks } from '../api/videos';
@@ -9,6 +10,7 @@ import CopyUrlButton from '../components/links/CopyUrlButton';
 import ClickTimeline from '../components/analytics/ClickTimeline';
 import DeviceChart from '../components/analytics/DeviceChart';
 import GeoChart from '../components/analytics/GeoChart';
+import { safeParseDate } from '../utils/dates';
 
 function formatTime(seconds) {
   if (!seconds) return '—';
@@ -26,6 +28,7 @@ const statusColors = {
 
 export default function VideoDetail() {
   const { id } = useParams();
+  const [selectedLinkId, setSelectedLinkId] = useState(null);
   const { data: video, loading: videoLoading } = useFetch(() => getVideo(id), [id]);
   const { data: links, loading: linksLoading } = useFetch(() => getVideoLinks(id), [id]);
   const { data: bookings, loading: bookingsLoading } = useFetch(() => getVideoBookings(id), [id]);
@@ -117,7 +120,7 @@ export default function VideoDetail() {
         )}
       </div>
 
-      <ClickTimeline videoId={id} />
+      <ClickTimeline videoId={id} linkId={selectedLinkId} links={links} onLinkChange={setSelectedLinkId} />
 
       {/* Bookings table */}
       <div className="rounded-xl bg-white shadow-sm border border-gray-100 overflow-hidden">
@@ -169,7 +172,10 @@ export default function VideoDetail() {
                       ) : '—'}
                     </td>
                     <td className="text-right px-6 py-3 text-gray-500 text-xs">
-                      {new Date(b.booked_at + (b.booked_at.endsWith('Z') ? '' : 'Z')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                      {(() => {
+                        const d = safeParseDate(b.booked_at);
+                        return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+                      })()}
                     </td>
                   </tr>
                 ))}

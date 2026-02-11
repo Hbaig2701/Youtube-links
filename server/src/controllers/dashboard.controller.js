@@ -39,7 +39,9 @@ async function getSummary(req, res, next) {
 async function getClicksOverTime(req, res, next) {
   try {
     const range = req.query.range || '7d';
-    const data = await clickModel.getClicksOverTime(range);
+    const startDate = req.query.start_date || null;
+    const endDate = req.query.end_date || null;
+    const data = await clickModel.getClicksOverTime(range, { startDate, endDate });
     res.json(data);
   } catch (err) { next(err); }
 }

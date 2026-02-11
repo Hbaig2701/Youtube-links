@@ -31,7 +31,35 @@ const getSummary = async () => {
   return rows[0];
 };
 
-const getClicksOverTime = async (range = '7d') => {
+const getClicksOverTime = async (range = '7d', { startDate, endDate } = {}) => {
+  if (startDate && endDate) {
+    const { rows } = await pool.query(`
+      SELECT clicked_at::date AS date, COUNT(*) AS count
+      FROM clicks c
+      JOIN links l ON l.id = c.link_id
+      JOIN videos v ON v.id = l.video_id
+      WHERE v.archived = false AND l.active = true
+        AND clicked_at >= $1::date AND clicked_at < ($2::date + INTERVAL '1 day')
+      GROUP BY clicked_at::date
+      ORDER BY clicked_at::date ASC
+    `, [startDate, endDate]);
+    return rows;
+  }
+
+  if (range === 'today') {
+    const { rows } = await pool.query(`
+      SELECT clicked_at::date AS date, COUNT(*) AS count
+      FROM clicks c
+      JOIN links l ON l.id = c.link_id
+      JOIN videos v ON v.id = l.video_id
+      WHERE v.archived = false AND l.active = true
+        AND clicked_at >= CURRENT_DATE
+      GROUP BY clicked_at::date
+      ORDER BY clicked_at::date ASC
+    `);
+    return rows;
+  }
+
   const rangeMap = {
     '7d': "7 days",
     '30d': "30 days",
@@ -53,24 +81,47 @@ const getClicksOverTime = async (range = '7d') => {
   return rows;
 };
 
-const getByVideoId = async (videoId, range = '30d') => {
-  const rangeMap = {
-    '7d': "7 days",
-    '30d': "30 days",
-    '90d': "90 days",
-    'all': "100 years",
-  };
-  const interval = rangeMap[range] || rangeMap['30d'];
+const getByVideoId = async (videoId, range = '30d', { startDate, endDate, linkId } = {}) => {
+  const conditions = ['l.video_id = $1', 'l.active = true'];
+  const params = [videoId];
+  let idx = 2;
+
+  if (linkId) {
+    conditions.push(`c.link_id = $${idx}`);
+    params.push(linkId);
+    idx++;
+  }
+
+  if (startDate && endDate) {
+    conditions.push(`c.clicked_at >= $${idx}::date`);
+    params.push(startDate);
+    idx++;
+    conditions.push(`c.clicked_at < ($${idx}::date + INTERVAL '1 day')`);
+    params.push(endDate);
+    idx++;
+  } else if (range === 'today') {
+    conditions.push('c.clicked_at >= CURRENT_DATE');
+  } else {
+    const rangeMap = {
+      '7d': "7 days",
+      '30d': "30 days",
+      '90d': "90 days",
+      'all': "100 years",
+    };
+    const interval = rangeMap[range] || rangeMap['30d'];
+    conditions.push(`c.clicked_at >= NOW() - $${idx}::interval`);
+    params.push(interval);
+    idx++;
+  }
 
   const { rows } = await pool.query(`
     SELECT c.clicked_at::date AS date, COUNT(*) AS count
     FROM clicks c
     JOIN links l ON l.id = c.link_id
-    WHERE l.video_id = $1 AND l.active = true
-      AND c.clicked_at >= NOW() - $2::interval
+    WHERE ${conditions.join(' AND ')}
     GROUP BY c.clicked_at::date
     ORDER BY c.clicked_at::date ASC
-  `, [videoId, interval]);
+  `, params);
   return rows;
 };
 

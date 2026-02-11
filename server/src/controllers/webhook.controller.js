@@ -3,6 +3,15 @@ const linkModel = require('../models/link.model');
 const settingModel = require('../models/setting.model');
 const pool = require('../db/connection');
 
+/** Return the first truthy value found under any of the given keys on obj. */
+function getField(obj, ...keys) {
+  if (!obj || typeof obj !== 'object') return null;
+  for (const k of keys) {
+    if (obj[k] != null && obj[k] !== '') return obj[k];
+  }
+  return null;
+}
+
 async function handleGhlWebhook(req, res, next) {
   try {
     // Verify webhook secret if configured
@@ -18,19 +27,38 @@ async function handleGhlWebhook(req, res, next) {
 
     const eventType = payload.type || payload.event || 'appointment.created';
 
-    // Extract contact info
-    const contact = payload.contact || payload;
-    const appointment = payload.appointment || payload.calendar || payload;
+    // Extract contact info — check nested objects AND top-level flat fields
+    const contact = payload.contact || {};
+    const appointment = payload.appointment || payload.calendar || {};
 
-    const contactName = contact.name || contact.full_name
-      || [contact.first_name || contact.firstName, contact.last_name || contact.lastName].filter(Boolean).join(' ')
-      || 'Unknown';
-    const contactEmail = contact.email || contact.contact_email || null;
-    const ghlContactId = contact.id || contact.contact_id || contact.contactId || null;
-    const ghlBookingId = appointment.id || appointment.appointment_id || appointment.appointmentId
-      || payload.id || null;
-    const appointmentTime = appointment.start_time || appointment.startTime
-      || appointment.selected_slot || appointment.selectedTimeslot || null;
+    const contactName =
+      getField(contact, 'name', 'full_name', 'Name', 'Full_Name', 'fullName') ||
+      getField(payload, 'Name', 'name', 'Full_Name', 'full_name', 'fullName') ||
+      [
+        getField(contact, 'first_name', 'firstName', 'First_Name') || getField(payload, 'first_name', 'firstName', 'First_Name'),
+        getField(contact, 'last_name', 'lastName', 'Last_Name') || getField(payload, 'last_name', 'lastName', 'Last_Name'),
+      ].filter(Boolean).join(' ') ||
+      'Unknown';
+
+    const contactEmail =
+      getField(contact, 'email', 'contact_email', 'Email') ||
+      getField(payload, 'email', 'Email', 'contact_email') ||
+      null;
+
+    const ghlContactId =
+      getField(contact, 'id', 'contact_id', 'contactId') ||
+      getField(payload, 'contact_id', 'contactId') ||
+      null;
+
+    const ghlBookingId =
+      getField(appointment, 'id', 'appointment_id', 'appointmentId') ||
+      getField(payload, 'appointment_id', 'appointmentId', 'id') ||
+      null;
+
+    const appointmentTime =
+      getField(appointment, 'start_time', 'startTime', 'selected_slot', 'selectedTimeslot') ||
+      getField(payload, 'start_time', 'startTime', 'selected_slot', 'selectedTimeslot') ||
+      null;
 
     const utms = extractUtms(payload);
 
@@ -140,16 +168,29 @@ function extractUtms(payload) {
     payload.data,
   ].filter(Boolean);
 
+  // Canonical variants for each UTM field
+  const variants = {
+    utm_source:   ['utm_source', 'utmsource', 'utmSource', 'Utm_Source', 'UTM_SOURCE'],
+    utm_campaign: ['utm_campaign', 'utmcampaign', 'utmCampaign', 'Utm_Campaign', 'UTM_CAMPAIGN'],
+    utm_content:  ['utm_content', 'utmcontent', 'utmContent', 'Utm_Content', 'UTM_CONTENT'],
+    utm_term:     ['utm_term', 'utmterm', 'utmTerm', 'Utm_Term', 'UTM_TERM'],
+  };
+
   for (const src of sources) {
-    for (const key of Object.keys(utms)) {
-      if (!utms[key]) {
-        utms[key] = src[key] || src[key.replace(/_/g, '')] || null;
+    // Case-insensitive scan: build a lowercase→value map for this source
+    const lcMap = {};
+    for (const k of Object.keys(src)) {
+      if (src[k] != null && src[k] !== '') lcMap[k.toLowerCase()] = src[k];
+    }
+
+    for (const [canonical, keys] of Object.entries(variants)) {
+      if (!utms[canonical]) {
+        for (const v of keys) {
+          const val = src[v] || lcMap[v.toLowerCase()];
+          if (val) { utms[canonical] = val; break; }
+        }
       }
     }
-    if (!utms.utm_source) utms.utm_source = src.utmSource || null;
-    if (!utms.utm_campaign) utms.utm_campaign = src.utmCampaign || null;
-    if (!utms.utm_content) utms.utm_content = src.utmContent || null;
-    if (!utms.utm_term) utms.utm_term = src.utmTerm || null;
   }
 
   const sourceUrl = payload.source_url || payload.sourceUrl || payload.page_url || payload.pageUrl;

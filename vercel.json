@@ -1,6 +1,7 @@
 {
-  "buildCommand": "npx vite build",
-  "outputDirectory": "dist",
+  "installCommand": "cd server && npm install && cd ../client && npm install",
+  "buildCommand": "cd client && npx vite build",
+  "outputDirectory": "client/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/go/(.*)", "destination": "/api" }

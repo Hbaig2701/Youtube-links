@@ -1,4 +1,5 @@
 const linkModel = require('../models/link.model');
+const clickModel = require('../models/click.model');
 const videoModel = require('../models/video.model');
 const slugify = require('../utils/slugify');
 
@@ -60,4 +61,14 @@ async function deactivateLink(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listLinks, createLink, updateLink, deactivateLink };
+async function resetClicks(req, res, next) {
+  try {
+    const link = await linkModel.findById(req.params.id);
+    if (!link) return res.status(404).json({ error: 'Link not found' });
+
+    await clickModel.deleteByLinkId(req.params.id);
+    res.status(204).end();
+  } catch (err) { next(err); }
+}
+
+module.exports = { listLinks, createLink, updateLink, deactivateLink, resetClicks };

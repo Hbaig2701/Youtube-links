@@ -153,8 +153,13 @@ const getRecentActivity = async (limit = 20) => {
   return rows;
 };
 
+const deleteByLinkId = async (linkId) => {
+  await pool.query('DELETE FROM clicks WHERE link_id = $1', [linkId]);
+};
+
 module.exports = {
   create,
+  deleteByLinkId,
   getSummary,
   getClicksOverTime,
   getByVideoId,

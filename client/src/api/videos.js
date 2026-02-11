@@ -9,3 +9,4 @@ export const getVideoLinks = (id) => api.get(`/api/videos/${id}/links`);
 export const createLink = (videoId, data) => api.post(`/api/videos/${videoId}/links`, data);
 export const updateLink = (id, data) => api.put(`/api/links/${id}`, data);
 export const deactivateLink = (id) => api.del(`/api/links/${id}`);
+export const resetLinkClicks = (id) => api.del(`/api/links/${id}/clicks`);

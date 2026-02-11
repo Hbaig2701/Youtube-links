@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, ChevronDown, ChevronRight, Trash2, ExternalLink, Globe, Zap, Bookmark, Check } from 'lucide-react';
+import { Plus, ChevronDown, ChevronRight, Trash2, ExternalLink, Globe, Zap, Bookmark, Check, RotateCcw } from 'lucide-react';
 import { useFetch } from '../hooks/useFetch';
-import { getVideos, createVideo, archiveVideo, getVideoLinks, createLink, deactivateLink } from '../api/videos';
+import { getVideos, createVideo, archiveVideo, getVideoLinks, createLink, deactivateLink, resetLinkClicks } from '../api/videos';
 import { getDomains } from '../api/domains';
 import { getTemplates, createTemplate, deleteTemplate, applyTemplates } from '../api/templates';
 import Modal from '../components/shared/Modal';
@@ -412,6 +412,13 @@ function VideoSection({ video, templates, onRefresh }) {
     onRefresh();
   };
 
+  const handleResetClicks = async (linkId) => {
+    if (!confirm('Reset all clicks for this link? This cannot be undone.')) return;
+    await resetLinkClicks(linkId);
+    refreshLinks();
+    onRefresh();
+  };
+
   return (
     <div className="rounded-xl bg-white shadow-sm border border-gray-100 overflow-hidden">
       <div
@@ -489,6 +496,13 @@ function VideoSection({ video, templates, onRefresh }) {
                     <td className="text-right py-2">
                       <div className="flex items-center justify-end gap-2">
                         <CopyUrlButton slug={video.slug} label={link.label} domain={video.domain} />
+                        <button
+                          onClick={() => handleResetClicks(link.id)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                          title="Reset click count"
+                        >
+                          <RotateCcw size={14} />
+                        </button>
                         <button
                           onClick={() => handleDeactivateLink(link.id)}
                           className="text-gray-400 hover:text-red-600 transition-colors p-1"

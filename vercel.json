@@ -1,6 +1,6 @@
 {
-  "installCommand": "npm install --include=dev",
-  "buildCommand": "npm run build -w client",
+  "installCommand": "npm install",
+  "buildCommand": "cd client && npx vite build",
   "outputDirectory": "client/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api" },

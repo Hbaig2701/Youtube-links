@@ -107,7 +107,6 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT
 );
     `
-  }
   },
   {
     name: '005_webhook_logs_and_video_source.sql',

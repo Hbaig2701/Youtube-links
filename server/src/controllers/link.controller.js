@@ -61,6 +61,16 @@ async function deactivateLink(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function debugClicks(req, res, next) {
+  try {
+    const link = await linkModel.findById(req.params.id);
+    if (!link) return res.status(404).json({ error: 'Link not found' });
+
+    const clicks = await clickModel.getByLinkId(req.params.id);
+    res.json({ link, clicks, click_count_from_db: clicks.length });
+  } catch (err) { next(err); }
+}
+
 async function resetClicks(req, res, next) {
   try {
     const link = await linkModel.findById(req.params.id);
@@ -71,4 +81,4 @@ async function resetClicks(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listLinks, createLink, updateLink, deactivateLink, resetClicks };
+module.exports = { listLinks, createLink, updateLink, deactivateLink, debugClicks, resetClicks };

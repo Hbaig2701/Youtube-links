@@ -55,11 +55,17 @@ const getConversionRate = async () => {
   const clickResult = await pool.query(`
     SELECT COUNT(*) AS total FROM clicks c
     JOIN links l ON l.id = c.link_id
+    JOIN videos v ON v.id = l.video_id
     WHERE l.is_booking_link = true AND l.active = true
+      AND v.source_type = 'youtube'
   `);
 
   const bookingResult = await pool.query(`
-    SELECT COUNT(*) AS total FROM bookings WHERE status != 'cancelled'
+    SELECT COUNT(*) AS total FROM bookings b
+    JOIN links l ON l.id = b.link_id
+    JOIN videos v ON v.id = l.video_id
+    WHERE b.status != 'cancelled'
+      AND v.source_type = 'youtube'
   `);
 
   const clicks = parseInt(clickResult.rows[0].total);

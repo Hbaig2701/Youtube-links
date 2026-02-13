@@ -37,7 +37,7 @@ export default function VideoDetail() {
   if (!video) return <p className="text-red-500">Video not found</p>;
 
   const totalBookings = bookings?.filter(b => b.status !== 'cancelled').length || 0;
-  const bookingClicks = links?.filter(l => l.is_booking_link === 1).reduce((sum, l) => sum + l.total_clicks, 0) || 0;
+  const bookingClicks = links?.filter(l => l.is_booking_link).reduce((sum, l) => sum + l.total_clicks, 0) || 0;
   const conversionRate = bookingClicks > 0 ? Math.round((totalBookings / bookingClicks) * 1000) / 10 : 0;
 
   return (
@@ -104,7 +104,7 @@ export default function VideoDetail() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
                         {link.label}
                       </span>
-                      {link.is_booking_link === 1 && (
+                      {link.is_booking_link && (
                         <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
                           Booking
                         </span>

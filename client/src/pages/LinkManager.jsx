@@ -93,7 +93,7 @@ function SavedLinksSection({ templates, onRefresh }) {
             <div key={t.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm group">
               <span className="font-medium text-gray-700">{t.label}</span>
               <span className="text-gray-400 text-xs truncate max-w-[180px]">{t.destination_url}</span>
-              {t.is_booking_link === 1 && (
+              {t.is_booking_link && (
                 <span className="text-xs text-green-600 font-medium">B</span>
               )}
               <button
@@ -229,7 +229,7 @@ function VideoForm({ onCreated, domains }) {
     }
   };
 
-  const defaultDomain = domains?.find(d => d.is_default === 1);
+  const defaultDomain = domains?.find(d => d.is_default);
   const selectedDomain = domains?.find(d => d.id === Number(domainId)) || defaultDomain;
 
   return (
@@ -509,7 +509,7 @@ function VideoSection({ video, templates, onRefresh }) {
                         {link.label}
                       </span>
                       <span className="ml-1.5 text-xs text-gray-300">#{link.id}</span>
-                      {link.is_booking_link === 1 && (
+                      {link.is_booking_link && (
                         <span className="ml-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
                           Booking
                         </span>

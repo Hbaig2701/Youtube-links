@@ -52,7 +52,7 @@ async function handleGhlWebhook(req, res, next) {
 
     const ghlBookingId =
       getField(appointment, 'id', 'appointment_id', 'appointmentId') ||
-      getField(payload, 'appointment_id', 'appointmentId', 'id') ||
+      getField(payload, 'appointment_id', 'appointmentId') ||
       null;
 
     const appointmentTime =
